@@ -1,5 +1,5 @@
 """
-Entidad que representa al dueño de perros en el sistema.
+Entidad que representa un veterinario en el sistema.
 """
 
 from datetime import datetime
@@ -8,21 +8,25 @@ import uuid
 import re
 
 
-class DuenoEntidad:
+class VeterinarioEntidad:
     """
-    Entidad que representa al dueño de perros en el sistema.
+    Entidad que representa un veterinario en el sistema.
     """
     
-    def __init__(self, nombre: str, apellido: str, telefono: str, email: str, direccion: str):
+    def __init__(self, nombre: str, apellido: str, cedula_profesional: str, 
+                 telefono: str, email: str, especialidad: str):
         self._id = str(uuid.uuid4())
         self._nombre = self._validar_nombre(nombre)
         self._apellido = self._validar_apellido(apellido)
+        self._cedula_profesional = self._validar_cedula(cedula_profesional)
         self._telefono = self._validar_telefono(telefono)
         self._email = self._validar_email(email)
-        self._direccion = self._validar_direccion(direccion)
+        self._especialidad = self._validar_especialidad(especialidad)
         self._fecha_registro = datetime.now()
-        self._perros_ids: List[str] = []
         self._activo = True
+        self._anos_experiencia = 0
+        self._consultas_realizadas: List[str] = []
+        self._horario_atencion = ""
     
     def _validar_nombre(self, nombre: str) -> str:
         """Valida que el nombre sea correcto."""
@@ -39,6 +43,15 @@ class DuenoEntidad:
         if len(apellido.strip()) < 2:
             raise ValueError("El apellido debe tener al menos 2 caracteres")
         return apellido.strip().title()
+    
+    def _validar_cedula(self, cedula: str) -> str:
+        """Valida que la cédula profesional sea correcta."""
+        if not cedula or not cedula.strip():
+            raise ValueError("La cédula profesional no puede estar vacía")
+        cedula_limpia = re.sub(r'[^\d]', '', cedula)
+        if len(cedula_limpia) < 6:
+            raise ValueError("La cédula profesional debe tener al menos 6 dígitos")
+        return cedula.strip()
     
     def _validar_telefono(self, telefono: str) -> str:
         """Valida que el teléfono sea correcto."""
@@ -58,13 +71,18 @@ class DuenoEntidad:
             raise ValueError("El formato del email no es válido")
         return email.strip().lower()
     
-    def _validar_direccion(self, direccion: str) -> str:
-        """Valida que la dirección sea correcta."""
-        if not direccion or not direccion.strip():
-            raise ValueError("La dirección no puede estar vacía")
-        if len(direccion.strip()) < 10:
-            raise ValueError("La dirección debe ser más específica")
-        return direccion.strip()
+    def _validar_especialidad(self, especialidad: str) -> str:
+        """Valida que la especialidad sea correcta."""
+        if not especialidad or not especialidad.strip():
+            raise ValueError("La especialidad no puede estar vacía")
+        especialidades_validas = [
+            "General", "Cirugía", "Dermatología", "Cardiología", 
+            "Neurología", "Oncología", "Traumatología", "Nutrición",
+            "Medicina Interna", "Anestesiología"
+        ]
+        especialidad_limpia = especialidad.strip().title()
+        # Permitir especialidades personalizadas, no solo las de la lista
+        return especialidad_limpia
     
     # Propiedades (Getters)
     @property
@@ -81,7 +99,11 @@ class DuenoEntidad:
     
     @property
     def nombre_completo(self) -> str:
-        return f"{self._nombre} {self._apellido}"
+        return f"Dr. {self._nombre} {self._apellido}"
+    
+    @property
+    def cedula_profesional(self) -> str:
+        return self._cedula_profesional
     
     @property
     def telefono(self) -> str:
@@ -92,20 +114,28 @@ class DuenoEntidad:
         return self._email
     
     @property
-    def direccion(self) -> str:
-        return self._direccion
+    def especialidad(self) -> str:
+        return self._especialidad
     
     @property
     def fecha_registro(self) -> datetime:
         return self._fecha_registro
     
     @property
-    def perros_ids(self) -> List[str]:
-        return self._perros_ids.copy()
-    
-    @property
     def activo(self) -> bool:
         return self._activo
+    
+    @property
+    def anos_experiencia(self) -> int:
+        return self._anos_experiencia
+    
+    @property
+    def consultas_realizadas(self) -> List[str]:
+        return self._consultas_realizadas.copy()
+    
+    @property
+    def horario_atencion(self) -> str:
+        return self._horario_atencion
     
     # Métodos para modificar datos
     def establecer_nombre(self, nombre: str) -> None:
@@ -124,66 +154,79 @@ class DuenoEntidad:
         """Establece un nuevo email."""
         self._email = self._validar_email(email)
     
-    def establecer_direccion(self, direccion: str) -> None:
-        """Establece una nueva dirección."""
-        self._direccion = self._validar_direccion(direccion)
+    def establecer_especialidad(self, especialidad: str) -> None:
+        """Establece una nueva especialidad."""
+        self._especialidad = self._validar_especialidad(especialidad)
+    
+    def establecer_anos_experiencia(self, anos: int) -> None:
+        """Establece los años de experiencia."""
+        if not isinstance(anos, int) or anos < 0:
+            raise ValueError("Los años de experiencia deben ser un número positivo")
+        if anos > 50:
+            raise ValueError("Los años de experiencia no pueden ser mayores a 50")
+        self._anos_experiencia = anos
+    
+    def establecer_horario_atencion(self, horario: str) -> None:
+        """Establece el horario de atención."""
+        self._horario_atencion = horario.strip() if horario else ""
     
     def activar(self) -> None:
-        """Activa al dueño en el sistema."""
+        """Activa al veterinario en el sistema."""
         self._activo = True
     
     def desactivar(self) -> None:
-        """Desactiva al dueño en el sistema."""
+        """Desactiva al veterinario en el sistema."""
         self._activo = False
     
-    # Métodos para gestión de perros
-    def agregar_perro(self, perro_id: str) -> bool:
-        """Agrega un perro a la lista del dueño."""
-        if not perro_id or not perro_id.strip():
-            raise ValueError("El ID del perro no puede estar vacío")
+    # Métodos para gestión de consultas
+    def agregar_consulta(self, consulta_id: str) -> bool:
+        """Agrega una consulta al historial del veterinario."""
+        if not consulta_id or not consulta_id.strip():
+            raise ValueError("El ID de la consulta no puede estar vacío")
         
-        if perro_id not in self._perros_ids:
-            self._perros_ids.append(perro_id)
+        if consulta_id not in self._consultas_realizadas:
+            self._consultas_realizadas.append(consulta_id)
             return True
         return False
     
-    def remover_perro(self, perro_id: str) -> bool:
-        """Remueve un perro de la lista del dueño."""
-        if perro_id in self._perros_ids:
-            self._perros_ids.remove(perro_id)
-            return True
-        return False
+    def cantidad_consultas(self) -> int:
+        """Retorna la cantidad total de consultas realizadas."""
+        return len(self._consultas_realizadas)
     
-    def tiene_perro(self, perro_id: str) -> bool:
-        """Verifica si el dueño tiene un perro específico."""
-        return perro_id in self._perros_ids
+    def es_especialista(self) -> bool:
+        """Verifica si es especialista (no general)."""
+        return self._especialidad.lower() != "general"
     
-    def cantidad_perros(self) -> int:
-        """Retorna la cantidad de perros que tiene el dueño."""
-        return len(self._perros_ids)
+    def es_experimentado(self) -> bool:
+        """Verifica si tiene experiencia significativa."""
+        return self._anos_experiencia >= 5
     
-    def puede_adoptar_mas_perros(self, limite: int = 5) -> bool:
-        """Verifica si el dueño puede adoptar más perros."""
-        return self.cantidad_perros() < limite
+    def puede_atender_casos_complejos(self) -> bool:
+        """Determina si puede atender casos complejos."""
+        return self.es_especialista() and self.es_experimentado()
     
     def obtener_informacion_completa(self) -> dict:
-        """Retorna toda la información del dueño."""
+        """Retorna toda la información del veterinario."""
         return {
             'id': self._id,
             'nombre': self._nombre,
             'apellido': self._apellido,
             'nombre_completo': self.nombre_completo,
+            'cedula_profesional': self._cedula_profesional,
             'telefono': self._telefono,
             'email': self._email,
-            'direccion': self._direccion,
+            'especialidad': self._especialidad,
             'fecha_registro': self._fecha_registro.isoformat(),
-            'perros_ids': self._perros_ids.copy(),
-            'cantidad_perros': self.cantidad_perros(),
-            'activo': self._activo
+            'activo': self._activo,
+            'anos_experiencia': self._anos_experiencia,
+            'cantidad_consultas': self.cantidad_consultas(),
+            'horario_atencion': self._horario_atencion,
+            'es_especialista': self.es_especialista(),
+            'es_experimentado': self.es_experimentado()
         }
     
     def __str__(self) -> str:
-        return f"{self.nombre_completo} - {self.cantidad_perros()} perro(s)"
+        return f"{self.nombre_completo} - {self._especialidad}"
     
     def __repr__(self) -> str:
-        return f"DuenoEntidad(id='{self._id}', nombre='{self.nombre_completo}')"
+        return f"VeterinarioEntidad(id='{self._id}', nombre='{self.nombre_completo}')"
